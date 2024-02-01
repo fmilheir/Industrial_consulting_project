@@ -1,1 +1,1 @@
-# Industrial_consultin_project
+# Industrial_consulting_project
