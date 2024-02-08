@@ -1,0 +1,52 @@
+version: '3'
+services:
+  postgresql:
+    container_name: industrial-consulting-postgresql 
+    image: postgres:latest 
+    environment: 
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: industrial_consulting
+    ports:
+     - "5432:5432"
+    volumes:
+      - data:/var/lib/postgresql/data
+
+  flask:
+    container_name: industrial-consulting-flask
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:  
+      - "5000:5000"
+    depends_on:
+      - postgresql
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_ENV=development
+      - DATABASE_URL=postgresql://postgres:postgres@postgresql:5432/industrial_consulting
+  
+  vuejs:
+    container_name: industrial-consulting-vuejs
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:  
+      - "8080:8080"
+    depends_on:
+      - flask
+    
+    
+  nginx:
+    container_name: industrial-consulting-nginx
+    build: ./nginx
+    ports:
+      - "8000:80"
+    volumes:
+      - ./frontend/dist:/usr/share/nginx/html
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/nginx.conf
+    depends_on:
+      - vuejs
+
+volumes: 
+  data:
