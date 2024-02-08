@@ -25,6 +25,7 @@ services:
       - FLASK_APP=app.py
       - FLASK_ENV=development
       - DATABASE_URL=postgresql://postgres:postgres@postgresql:5432/industrial_consulting
+
   
   vuejs:
     container_name: industrial-consulting-vuejs
@@ -34,8 +35,9 @@ services:
     ports:  
       - "8080:8080"
     depends_on:
+
       - flask
-    
+
     
   nginx:
     container_name: industrial-consulting-nginx
