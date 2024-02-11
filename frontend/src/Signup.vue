@@ -11,7 +11,11 @@
                 <input type="text" id="lastName" v-model="lastName" required>
             </div>
             <div>
-                <label for="phoneNumber">Telephone  Number (Format: 04xx-xxx-xxxx)</label><br>
+                <label for="email">E-mail</label>
+                <input type="email" id="email" v-model="email" required>
+            </div>
+            <div>
+                <label for="phoneNumber">Telephone  Number (Format: 07xx-xxx-xxxx)</label><br>
                 <input type="tel" name="phoneNumber" id="phoneNumber" pattern="[0-9]{4}-[0-9]{3}-[0-9]{4}" v-model="phoneNumber" required>
             </div>
             <div>
@@ -32,22 +36,30 @@
     export default {
         data() {
             return {
-                password: '',
-                confirmPassword: '',
                 firstName:'',
                 lastName:'',
+                email: '',
+                password: '',
+                confirmPassword: '',
                 phoneNumber:''
             };
         },
         methods: {
             signup() {
-                fetch('http://flask:5000/signup', {
+                if(this.password !== this.confirmPassword){
+                    alert("Passwords do not match");
+                    return;
+                }
+                fetch(`${process.env.VUE_APP_BACKEND_URL}/signup`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        username: this.username,
+                        firstName: this.firstName,
+                        lastName: this.lastName,
+                        email: this.email,
+                        phoneNumber: this.phoneNumber,
                         password: this.password
                     })
                 })
