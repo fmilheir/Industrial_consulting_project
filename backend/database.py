@@ -35,17 +35,17 @@ def create_table_user_if_not_exists():
                 )
             """)
             conn.commit()
-            return "Table 'user' created successfully."
-        else:
-            return "Table 'user' already exists."
 
-    except psycopg2.Error as e:
-        return f"Unable to create table: {e}"
-    finally:
         if cur is not None:
             cur.close()
         if conn is not None:
             DBPool.get_instance().putconn(conn)
+
+        return "Table 'user' created successfully."
+
+    except psycopg2.Error as e:
+        return f"Unable to create table: {e}"
+
 
 def test_db_connection():
     conn = None
