@@ -47,6 +47,36 @@ def create_table_user_if_not_exists():
         return f"Unable to create table: {e}"
 
 
+def create_table_car_if_not_exists():
+    conn = None
+    try:
+        conn = DBPool.get_instance().getconn()
+        cur = conn.cursor()
+
+        cur.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'car')")
+        table_exists = cur.fetchone()[0]
+
+        if not table_exists:
+            cur.execute("""
+                CREATE TABLE "car" (
+                    id SERIAL PRIMARY KEY,
+                    user_id VARCHAR(255) REFERENCES "user" (id),
+                    reg VARCHAR(255) NOT NULL,
+                )
+            """)
+            conn.commit()
+
+        if cur is not None:
+            cur.close()
+        if conn is not None:
+            DBPool.get_instance().putconn(conn)
+
+        return "Table 'car' created successfully."
+
+    except psycopg2.Error as e:
+        return f"Unable to create table 'car': {e}"
+
+
 def test_db_connection():
     conn = None
     try:
