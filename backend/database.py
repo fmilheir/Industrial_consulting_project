@@ -77,6 +77,40 @@ def create_table_car_if_not_exists():
     except psycopg2.Error as e:
         return f"Unable to create table 'car': {e}"
 
+def create_table_trip_if_not_exists():
+    conn = None
+    try:
+        conn = DBPool.get_instance().getconn()
+        cur = conn.cursor()
+
+        cur.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'trip')")
+        table_exists = cur.fetchone()[0]
+
+        if not table_exists:
+            cur.execute("""
+                CREATE TABLE "trip" (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER NOT NULL,
+                    trip INTEGER NOT NULL,
+                    footprint INTEGER NOT NULL,
+                    car_id INTEGER NOT NULL,
+                    FOREIGN KEY (user_id) REFERENCES "user"(id),
+                    FOREIGN KEY (car_id) REFERENCES "car"(id)
+                )
+            """)
+            conn.commit()
+
+        if cur is not None:
+            cur.close()
+        if conn is not None:
+            DBPool.get_instance().putconn(conn)
+
+        return "Table 'trip' created successfully."
+
+    except psycopg2.Error as e:
+        return f"Unable to create table 'car': {e}"
+
+
 
 def test_db_connection():
     conn = None
