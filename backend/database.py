@@ -52,18 +52,12 @@ def test_db_connection():
     try:
         conn = DBPool.get_instance().getconn()
         cur = conn.cursor()
-        cur.execute("SELECT * FROM test LIMIT 1")
 
-        row = cur.fetchone()
-        
-        value = f"Database connection successful. Test query result: {row} User table: {create_table_user_if_not_exists()}"
-
-        #Close connection after all queries
         if cur is not None:
             cur.close()
         if conn is not None:
             DBPool.get_instance().putconn(conn)
 
-        return value
+        return "Database connection successful"
     except psycopg2.Error as e:
         return f"Unable to connect to the database: {e}"
