@@ -60,8 +60,9 @@ def create_table_car_if_not_exists():
             cur.execute("""
                 CREATE TABLE "car" (
                     id SERIAL PRIMARY KEY,
-                    user_id VARCHAR(255) REFERENCES "user" (id),
+                    user_id INTEGER NOT NULL,
                     reg VARCHAR(255) NOT NULL,
+                    FOREIGN KEY (user_id) REFERENCES "user"(id)
                 )
             """)
             conn.commit()

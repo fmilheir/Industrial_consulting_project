@@ -1,6 +1,7 @@
 import unittest
 from database import test_db_connection
 from database import create_table_user_if_not_exists
+from database import create_table_car_if_not_exists
 
 
 class TestDatabase(unittest.TestCase):
