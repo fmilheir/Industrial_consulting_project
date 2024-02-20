@@ -10,7 +10,7 @@ class DBPool:
             DBPool._instance = pool.ThreadedConnectionPool(minconn=1, maxconn=10,
                                                            user="postgres",
                                                            password="postgres",
-                                                           host="postgresql",
+                                                           host="127.0.0.1",
                                                            port="5432",
                                                            database='industrial_consulting')
         return DBPool._instance
@@ -55,11 +55,15 @@ def test_db_connection():
         cur.execute("SELECT * FROM test LIMIT 1")
 
         row = cur.fetchone()
-        return f"Database connection successful. Test query result: {row} User table: {create_table_user_if_not_exists()}"
-    except psycopg2.Error as e:
-        return f"Unable to connect to the database: {e}"
-    finally:
+        
+        value = f"Database connection successful. Test query result: {row} User table: {create_table_user_if_not_exists()}"
+
+        #Close connection after all queries
         if cur is not None:
             cur.close()
         if conn is not None:
             DBPool.get_instance().putconn(conn)
+
+        return value
+    except psycopg2.Error as e:
+        return f"Unable to connect to the database: {e}"
