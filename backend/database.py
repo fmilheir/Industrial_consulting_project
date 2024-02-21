@@ -27,11 +27,12 @@ def create_table_user_if_not_exists():
         if not table_exists:
             cur.execute("""
                 CREATE TABLE "user" (
-                    id SERIAL PRIMARY KEY,
+                    id SERIAL PRIMARY KEY AUTO_INCREMENT,
                     first_name VARCHAR(255) NOT NULL,
                     last_name VARCHAR(255) NOT NULL,
                     email VARCHAR(255) NOT NULL UNIQUE,
-                    number VARCHAR(20)
+                    number VARCHAR(20),
+                    admin INTEGER
                 )
             """)
             conn.commit()
@@ -174,8 +175,50 @@ def create_table_public_transport_if_not_exists():
     except psycopg2.Error as e:
         return f"Unable to create table 'public_transport': {e}"
 
+#Insert queries
+def create_new_user(first_name, last_name, email, number, admin):
+    conn = None
+    try:
+        conn = DBPool.get_instance().getconn()
+        cur = conn.cursor()
+
+        #psycopg2 sanitises inputs automatically so should be safe from SQL injections
+        cur.execute("INSERT INTO user (first_name, last_name, email, number, admin) VALUES (%s, %s, %s, %s, %s)", (first_name, last_name, email, number, admin))
+        conn.commit()
+
+        if cur is not None:
+            cur.close()
+        if conn is not None:
+            DBPool.get_instance().putconn(conn)
+
+        return "New user created successfully."
+
+    except psycopg2.Error as e:
+        return f"Unable to create new user: {e}"
+
+def create_new_public_transport(transport_type, footprint):
+    conn = None
+    try:
+        conn = DBPool.get_instance().getconn()
+        cur = conn.cursor()
+
+        #psycopg2 sanitises inputs automatically so should be safe from SQL injections
+        cur.execute("INSERT INTO public_transport(type, footprint) VALUES (%s, %s)", (transport_type, footprint))
+        conn.commit()
+
+        if cur is not None:
+            cur.close()
+        if conn is not None:
+            DBPool.get_instance().putconn(conn)
+
+        return "New transport created successfully."
+
+    except psycopg2.Error as e:
+        return f"Unable to create new user: {e}"
 
 
+
+#Generic database connection test
 def test_db_connection():
     conn = None
     try:
