@@ -26,46 +26,32 @@ class DBPool:
         return DBPool._instance
 
 def create_table_user_if_not_exists():
-    with DBPool.get_instance().getconn() as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user')")
-            table_exists = cur.fetchone()[0]
-            if not table_exists:
-                cur.execute("""
-                    CREATE TABLE "user" (
-                        id SERIAL PRIMARY KEY,
-                        first_name VARCHAR(255) NOT NULL,
-                        last_name VARCHAR(255) NOT NULL,
-                        email VARCHAR(255) NOT NULL UNIQUE,
-                        number VARCHAR(20),
-                        password VARCHAR(255) NOT NULL,
-                        verification_token VARCHAR(255),
-                        token_expiration TIMESTAMP,
-                        verified BOOLEAN NOT NULL DEFAULT FALSE,
-                        created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                """)
-                conn.commit()
-                return "Table 'user' created successfully."
-            else:
-                return "Table 'user' already exists."
-
-        return "Table 'user' created successfully."
-
+    try:
+        with DBPool.get_instance().getconn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user')")
+                table_exists = cur.fetchone()[0]
+                if not table_exists:
+                    cur.execute("""
+                        CREATE TABLE "user" (
+                            id SERIAL PRIMARY KEY,
+                            first_name VARCHAR(255) NOT NULL,
+                            last_name VARCHAR(255) NOT NULL,
+                            email VARCHAR(255) NOT NULL UNIQUE,
+                            number VARCHAR(20),
+                            password VARCHAR(255) NOT NULL,
+                            verification_token VARCHAR(255),
+                            token_expiration TIMESTAMP,
+                            verified BOOLEAN NOT NULL DEFAULT FALSE,
+                            created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                    conn.commit()
+                    return "Table 'user' created successfully."
+                else:
+                    return "Table 'user' already exists."
     except psycopg2.Error as e:
         return f"Unable to create table: {e}"
-
-
-def test_db_connection():
-    conn = None
-    try:
-        conn = DBPool.get_instance().getconn()
-        cur = conn.cursor()
-
-        if cur is not None:
-            cur.close()
-        if conn is not None:
-            DBPool.get_instance().putconn(conn)
 
             
 def generate_jwt_token(email):
