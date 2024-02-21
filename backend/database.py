@@ -67,8 +67,138 @@ def generate_jwt_token(email):
         return None
 
 
+def create_table_car_if_not_exists():
+    conn = None
+    try:
+        conn = DBPool.get_instance().getconn()
+        cur = conn.cursor()
+
+        cur.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'car')")
+        table_exists = cur.fetchone()[0]
+
+        if not table_exists:
+            cur.execute("""
+                CREATE TABLE "car" (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER NOT NULL,
+                    reg VARCHAR(255) NOT NULL,
+                    FOREIGN KEY (user_id) REFERENCES "user"(id)
+                )
+            """)
+            conn.commit()
+
+        if cur is not None:
+            cur.close()
+        if conn is not None:
+            DBPool.get_instance().putconn(conn)
+
+        return "Table 'car' created successfully."
+
+    except psycopg2.Error as e:
+        return f"Unable to create table 'car': {e}"
 
 
+def create_table_trip_if_not_exists():
+    conn = None
+    try:
+        conn = DBPool.get_instance().getconn()
+        cur = conn.cursor()
+
+        cur.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'trip')")
+        table_exists = cur.fetchone()[0]
+
+        if not table_exists:
+            cur.execute("""
+                CREATE TABLE "trip" (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER NOT NULL,
+                    distance INTEGER NOT NULL,
+                    footprint INTEGER NOT NULL,
+                    car_id INTEGER NOT NULL,
+                    FOREIGN KEY (user_id) REFERENCES "user"(id),
+                    FOREIGN KEY (car_id) REFERENCES "car"(id)
+                )
+            """)
+            conn.commit()
+
+        if cur is not None:
+            cur.close()
+        if conn is not None:
+            DBPool.get_instance().putconn(conn)
+
+        return "Table 'trip' created successfully."
+
+    except psycopg2.Error as e:
+        return f"Unable to create table 'car': {e}"
+
+
+def create_table_public_transport_if_not_exists():
+    conn = None
+    try:
+        conn = DBPool.get_instance().getconn()
+        cur = conn.cursor()
+
+        cur.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'public_transport')")
+        table_exists = cur.fetchone()[0]
+
+        if not table_exists:
+            cur.execute("""
+                CREATE TABLE "public_transport" (
+                    id SERIAL PRIMARY KEY,
+                    type VARCHAR(255),
+                    footprint INTEGER NOT NULL
+                )
+            """)
+            conn.commit()
+
+        if cur is not None:
+            cur.close()
+        if conn is not None:
+            DBPool.get_instance().putconn(conn)
+
+        return "Table 'public_transport' created successfully."
+
+    except psycopg2.Error as e:
+        return f"Unable to create table 'public_transport': {e}"
+
+#Insert queries
+def create_new_public_transport(transport_type, footprint):
+    conn = None
+    try:
+        conn = DBPool.get_instance().getconn()
+        cur = conn.cursor()
+
+        #psycopg2 sanitises inputs automatically so should be safe from SQL injections
+        cur.execute("INSERT INTO public_transport(type, footprint) VALUES (%s, %s)", (transport_type, footprint))
+        conn.commit()
+
+        if cur is not None:
+            cur.close()
+        if conn is not None:
+            DBPool.get_instance().putconn(conn)
+
+        return "New transport created successfully."
+
+    except psycopg2.Error as e:
+        return f"Unable to create new user: {e}"
+
+
+
+#Generic database connection test
+def test_db_connection():
+    conn = None
+    try:
+        conn = DBPool.get_instance().getconn()
+        cur = conn.cursor()
+     
+        if cur is not None:
+            cur.close()
+        if conn is not None:
+            DBPool.get_instance().putconn(conn)
+
+        return "Database connection successful"
+    except psycopg2.Error as e:
+        return f"Unable to connect to the database: {e}"
 
 def store_user_in_database(first_name, last_name, email, phone_number, hashed_password, verification_token):
     token_expiration = datetime.datetime.utcnow() + datetime.timedelta(hours=1)
