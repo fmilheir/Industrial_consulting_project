@@ -10,6 +10,7 @@
                 <label for="password">Password</label>
                 <input type="password" id="password" v-model="password" required>
             </div>
+            <div><a href="/confirmEmail">Forgot Password</a></div>
             <div>
                 <button type="submit">Login</button>
             </div>
