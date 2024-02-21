@@ -20,7 +20,7 @@ class DBPool:
             DBPool._instance = pool.ThreadedConnectionPool(minconn=1, maxconn=10,
                                                            user="postgres",
                                                            password="postgres",
-                                                           host="postgresql",
+                                                           host="127.0.0.1",
                                                            port="5432",
                                                            database='industrial_consulting')
         return DBPool._instance
@@ -30,7 +30,6 @@ def create_table_user_if_not_exists():
         with conn.cursor() as cur:
             cur.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user')")
             table_exists = cur.fetchone()[0]
-
             if not table_exists:
                 cur.execute("""
                     CREATE TABLE "user" (
@@ -50,25 +49,25 @@ def create_table_user_if_not_exists():
                 return "Table 'user' created successfully."
             else:
                 return "Table 'user' already exists."
-        
+
+        return "Table 'user' created successfully."
+
+    except psycopg2.Error as e:
+        return f"Unable to create table: {e}"
+
 
 def test_db_connection():
     conn = None
     try:
         conn = DBPool.get_instance().getconn()
         cur = conn.cursor()
-        cur.execute("SELECT * FROM test LIMIT 1")
 
-        row = cur.fetchone()
-        return f"Database connection successful. Test query result: {row} User table: {create_table_user_if_not_exists()}"
-    except psycopg2.Error as e:
-        return f"Unable to connect to the database: {e}"
-    finally:
         if cur is not None:
             cur.close()
         if conn is not None:
             DBPool.get_instance().putconn(conn)
 
+            
 def generate_jwt_token(email):
     try:
         expiration_time = datetime.datetime.utcnow() + datetime.timedelta(hours=1)
@@ -136,4 +135,3 @@ def verify_user_account(email, verification_token):
                     return "Verification token expired or invalid."
             else:
                 return "User not found."
-    
