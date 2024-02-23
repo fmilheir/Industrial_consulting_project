@@ -10,7 +10,7 @@
                 <label for="password">Password</label>
                 <input type="password" id="password" v-model="password" required>
             </div>
-            <div><a href="/confirmEmail">Forgot Password</a></div>
+            <div><router-link to="/confirmEmail">Forgot Password?</router-link></div>
             <div>
                 <button type="submit">Login</button>
             </div>
@@ -27,7 +27,7 @@
         },
         methods: {
             login() {
-                fetch('http://flask:5000/login', {
+                fetch(`${process.env.VUE_APP_BACKEND_URL}/login`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

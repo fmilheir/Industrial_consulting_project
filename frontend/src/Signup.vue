@@ -50,7 +50,6 @@
                     alert("Passwords do not match");
                     return;
                 }
-                console.log(process.env.VUE_APP_BACKEND_URL)
                 fetch(`${process.env.VUE_APP_BACKEND_URL}/signup`, {
                     method: 'POST',
                     headers: {

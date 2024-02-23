@@ -4,11 +4,17 @@ import jwt
 import datetime
 import logging
 import os
+import bcrypt
 from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__) 
 load_dotenv()
-JWT_SECRET = os.getenv('JWT_SECRET') or 'secret'
+JWT_SECRET = os.getenv('JWT_SECRET')
+DB_USER = os.getenv('DB_USER')
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT")
+DB_NAME = os.getenv("DB_NAME")
 # DATABASE_URL = os.getenv("DATABASE_URL")
 
 class DBPool:
@@ -18,11 +24,11 @@ class DBPool:
     def get_instance():
         if DBPool._instance is None:
             DBPool._instance = pool.ThreadedConnectionPool(minconn=1, maxconn=10,
-                                                           user="postgres",
-                                                           password="postgres",
-                                                           host="postgresql",
-                                                           port="5432",
-                                                           database='industrial_consulting')
+                                                           user=DB_USER,
+                                                           password=DB_PASSWORD,
+                                                           host=DB_HOST,
+                                                           port=DB_PORT,
+                                                           database=DB_NAME)
         return DBPool._instance
 
 def create_table_user_if_not_exists():
@@ -50,6 +56,27 @@ def create_table_user_if_not_exists():
                 return "Table 'user' created successfully."
             else:
                 return "Table 'user' already exists."
+            
+def create_table_password_reset_tokens_if_not_exists():
+    with DBPool.get_instance().getconn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'password_reset_tokens')")
+            table_exists = cur.fetchone()[0]
+
+            if not table_exists:
+                cur.execute("""
+                    CREATE TABLE password_reset_tokens (
+                        id SERIAL PRIMARY KEY,
+                        user_id INTEGER REFERENCES "user" (id),
+                        token VARCHAR(255) NOT NULL,
+                        expiration TIMESTAMP NOT NULL,
+                        created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                conn.commit()
+                return "Table 'password_reset_tokens' created successfully."
+            else:
+                return "Table 'password_reset_tokens' already exists."
         
 
 def test_db_connection():
@@ -114,6 +141,87 @@ def store_user_in_database(first_name, last_name, email, phone_number, hashed_pa
                 conn.rollback() 
                 return f"Unexpected error: {e}", 500
         
+
+def check_user_email(email):
+    with DBPool.get_instance().getconn() as conn:
+        with conn.cursor() as cur:
+            cur.execute('SELECT EXISTS (SELECT 1 FROM "user" WHERE email = %s)', (email,))
+            user_exists = cur.fetchone()[0]
+            return user_exists
+
+
+def verify_reset_token(email, token):
+    try:
+        decoded_token = jwt.decode(token, JWT_SECRET, algorithms='HS256')
+        return decoded_token['email'] == email
+    except jwt.ExpiredSignatureError:
+        return False
+    except jwt.InvalidTokenError:
+        return False
+    
+    
+    
+def update_user_password(email, new_password):
+    print(f"Updating password for email: {email}, new password: {new_password}")
+    with DBPool.get_instance().getconn() as conn:
+        with conn.cursor() as cur:
+            try:
+                hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
+                cur.execute('UPDATE "user" SET password = %s WHERE email = %s', (hashed_password, email))
+                conn.commit()
+                return "Password updated successfully."
+            except psycopg2.Error as e:
+                logger.error(f"Failed to update password: {e}", exc_info=True)
+                conn.rollback()
+                return "Failed to update password.", 500
+            except Exception as e:
+                logger.exception(f"Unexpected error: {e}")
+                conn.rollback()
+                return "Unexpected error.", 500
+            
+
+
+
+def generate_password_reset_token(user_id):
+    # Generate a unique token
+    token = generate_jwt_token()
+    # Calculate token expiration (e.g., 1 hour from now)
+    expiration = datetime.datetime.utcnow() + datetime.timedelta(hours=3)
+    # Store the token in the database
+    with DBPool.get_instance().getconn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO password_reset_tokens (user_id, token, expiration)
+                VALUES (%s, %s, %s)
+            """, (user_id, token, expiration))
+            conn.commit()
+    return token
+
+
+def check_password_reset_token(email, token):
+    print(f"Checking password reset token for email: {email}, token: {token}")
+    with DBPool.get_instance().getconn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT id, expiration FROM "password_reset_tokens" 
+                WHERE user_id = (SELECT id FROM "user" WHERE email = %s) 
+                AND token = %s
+            """, (email, token))
+            result = cur.fetchone()
+
+            if result:
+                logger.info(f"Password reset token found: {result}")
+                user_id, expiration = result
+                if datetime.datetime.utcnow() < expiration:
+                    return user_id  # Token valid and not expired
+                else:
+                    return False  # Token expired 
+            else:
+                return False  # Token not found
+
+
+
+
 
 def verify_user_account(email, verification_token):
     with DBPool.get_instance().getconn() as conn:
