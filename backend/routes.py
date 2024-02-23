@@ -2,7 +2,7 @@ from flask import request, jsonify, make_response
 import bcrypt
 from database import *
 import jwt
-from email_sending import send_verification_email
+from email_sending import send_verification_email, send_password_reset_email
 import traceback
 
 def configure_routes(app, mail):
@@ -57,30 +57,55 @@ def configure_routes(app, mail):
         
 
 
-
-
-    @app.route('/verify', methods=['POST'])
-    def verify_user():
-        data = request.get_json()
-        email = data.get('email')
-        token = data.get('token')
-        return _verify_user_logic(email, token, mail, app)
-
-    def _verify_user_logic(email, token, mail, app):
-        data = request.get_json()
-        email = data.get('email')
-        token = data.get('token')
+    # This endpoint sends a password reset link or code to the user's email
+    @app.route('/request_password_reset', methods=['POST'])
+    def request_password_reset():
         try:
-            jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
-            message = verify_user_account(email, token)
-            return jsonify({'message': message}), 200
-        except jwt.ExpiredSignatureError:
-            # If the token has expired, genereate a new one and send it 
-            new_token = generate_jwt_token(email)
-            send_verification_email(email, new_token, mail, app)
-            return jsonify({'error': 'Token expired, new token sent'}), 401
-        except jwt.InvalidTokenError:
-            return jsonify({'error': 'Invalid token'}), 401
+            data = request.get_json()
+            email = data.get('email')
+            # Log the incoming email
+            app.logger.debug(f"Received password reset request for email: {email}")
+            # Check if the email exists in the database 
+            user_exists = check_user_email(email)
+            if user_exists:
+                # Generate the password reset token
+                token = generate_jwt_token(email)
+                app.logger.debug(f"Generated password reset token: {token}")
+                # Send the password reset email
+                email_sent = send_password_reset_email(email, token, mail, app)
+                # Log the email sending result
+                if email_sent:
+                    return jsonify({'message': 'Password reset email sent successfully'}), 200
+                else:
+                    app.logger.error("Failed to send password reset email")
+                    return jsonify({'error': 'Failed to send password reset email'}), 500 
+            else:
+                return jsonify({'error': 'User with that email does not exist'}), 404
+        except Exception as e:
+            app.logger.exception(f"Exception in /request_password_reset: {e}") 
+            return jsonify({'error': 'Failed to process password reset request'}), 500
+          
+
+
+    # This endpoint confirms the password reset using the token and updates the password
+    @app.route('/confirm_password_reset', methods=['POST'])
+    def confirm_password_reset():
+
+        data = request.get_json()
+        token = data.get('token')
+        new_password = data.get('newPassword')
+        email = data.get('email')
+            
+        user_id = check_password_reset_token(email, token)
+        if user_id:
+            update_user_password(email, new_password)
+            return jsonify({'message': 'Password reset successfully'}), 200
+        else:
+            return jsonify({'error': 'Invalid or expired reset token'}), 400 
+        
+
+
+    
 
     def _build_cors_preflight_response():
         response = make_response()
