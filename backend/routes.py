@@ -55,6 +55,33 @@ def configure_routes(app, mail):
                 'traceback': error_traceback
             }), 500
         
+    @app.route('/login', methods=['POST', 'OPTIONS'])
+    def login():
+        if request.method == 'OPTIONS':
+            response = make_response(jsonify({'status': 'OK'}), 200)
+            response.headers['Access-Control-Allow-Origin'] = 'http://localhost:8080'
+            response.headers['Access-Control-Allow-Methods'] = 'POST'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+            return _build_cors_preflight_response()
+        try:
+            data = request.get_json()
+            email = data.get('email')
+            password = data.get('password')
+            if not all([email, password]):
+                return jsonify({'error': 'All fields must be filled'}), 400
+            user = get_user_by_email(email)
+            if user is None:
+                return jsonify({'error': 'User with that email does not exist'}), 404
+            if not user['verified']:
+                return jsonify({'error': 'User is not verified'}), 403
+            if bcrypt.checkpw(password.encode('utf-8'), user['password']):
+                token = generate_jwt_token(email)
+                return jsonify({'token': token}), 200
+            return jsonify({'error': 'Invalid password'}), 401
+        except Exception as e:
+            logger.exception(f"Exception in login: {e}")
+            return jsonify({'error': 'Failed to login'}), 500
+        
 
 
     # This endpoint sends a password reset link or code to the user's email

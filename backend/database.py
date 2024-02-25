@@ -81,14 +81,14 @@ def create_table_password_reset_tokens_if_not_exists():
         
 
 def test_db_connection():
-    conn = None
-
+     if DBPool._instance is None:
+            DBPool._instance = pool.ThreadedConnectionPool(minconn=1, maxconn=10,
                                                            user="postgres",
                                                            password="postgres",
-                                                           host="127.0.0.1",
+                                                           host="postgresql",
                                                            port="5432",
                                                            database='industrial_consulting')
-        return DBPool._instance
+            return DBPool._instance
 
 def create_table_user_if_not_exists():
     try:
