@@ -3,8 +3,8 @@
         <h1>Login</h1>
         <form @submit.prevent="login">
             <div>
-                <label for="firstName">Username</label>
-                <input type="text" id="firstName" v-model="username" required>
+                <label for="email">Email</label>
+                <input type="text" id="email" v-model="email" required>
             </div>
             <div>
                 <label for="password">Password</label>
@@ -21,7 +21,7 @@
     export default {
         data() {
             return {
-                username: '',
+                email: '',
                 password: '',
             };
         },
@@ -33,9 +33,15 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        username: this.username,
+                        email: this.email,
                         password: this.password
                     })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Invalid email or password');
+                    }
+                    return response.json();
                 })
                 .then(response => response.json())
                 .then(data => {

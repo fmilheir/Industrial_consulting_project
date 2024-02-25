@@ -4,8 +4,11 @@ import jwt
 import datetime
 import logging
 import os
-import bcrypt
 from dotenv import load_dotenv
+from flask import jsonify
+import sys
+import bcrypt
+
 
 logger = logging.getLogger(__name__) 
 load_dotenv()
@@ -397,3 +400,18 @@ def verify_user_account(email, verification_token):
                     return "Verification token expired or invalid."
             else:
                 return "User not found."
+            
+def verify_password(email, password):
+    if not email or not password:
+        return False
+    if not check_user_email(email):
+        return False
+    with DBPool.get_instance().getconn() as conn:
+        with conn.cursor() as cur:
+            cur.execute('SELECT password FROM "user" WHERE email = %s', (email,))
+            print("Password verified", file=sys.stderr)
+            stored_password = cur.fetchone()[0]
+            print("the password hash from DB is", stored_password, file=sys.stderr) 
+            # Ensure the stored password hash is encoded to bytes
+            stored_password_bytes = stored_password.encode('utf-8')
+            return stored_password_bytes
