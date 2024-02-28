@@ -11,6 +11,7 @@ def configure_routes(app, mail):
 
     @app.route('/signup', methods=['POST', 'OPTIONS'])
     def signup():
+        print("Received signup request", file=sys.stderr)
         if request.method == 'OPTIONS':
             response = make_response(jsonify({'status': 'OK'}), 200)
             response.headers['Access-Control-Allow-Origin'] = 'http://localhost:8080'
@@ -58,10 +59,16 @@ def configure_routes(app, mail):
                 'traceback': error_traceback
             }), 500
         
+    
+
     @app.route('/login', methods=['POST', 'OPTIONS'])
     def login():
+        print("Received login request", file=sys.stderr)
         if request.method == 'OPTIONS':
-            # Assume _build_cors_preflight_response is defined elsewhere to handle CORS preflight
+            response = make_response(jsonify({'status': 'OK'}), 200)
+            response.headers['Access-Control-Allow-Origin'] = 'http://localhost:8080'
+            response.headers['Access-Control-Allow-Methods'] = 'POST'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
             return _build_cors_preflight_response()
         try:
             data = request.get_json()
@@ -72,6 +79,7 @@ def configure_routes(app, mail):
             print(f"Received login request for user: {email}", file=sys.stderr)
             print(f"Received login request for user: {password}", file=sys.stderr)
             print(f"Received login request for user: {data}", file=sys.stderr)
+
 
             if not all([email, password]):
                 return jsonify({'error': 'All fields must be filled'}), 400
@@ -104,9 +112,6 @@ def configure_routes(app, mail):
         else:
             return jsonify({'error': 'Invalid or expired reset token'}), 400 
         
-
-
-    
 
     def _build_cors_preflight_response():
         response = make_response()

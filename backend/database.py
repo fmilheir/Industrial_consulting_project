@@ -22,17 +22,15 @@ DB_NAME = os.getenv("DB_NAME")
 
 class DBPool:
     _instance = None
-
     @staticmethod
     def get_instance():
         if DBPool._instance is None:
             DBPool._instance = pool.ThreadedConnectionPool(minconn=1, maxconn=10,
-
-                                                           user=DB_USER,
-                                                           password=DB_PASSWORD,
-                                                           host=DB_HOST,
-                                                           port=DB_PORT,
-                                                           database=DB_NAME)
+                                                           user="postgres",
+                                                           password="postgres",
+                                                           host="127.0.0.1",
+                                                           port="5432",
+                                                           database='industrial_consulting')
         return DBPool._instance
 
 def create_table_user_if_not_exists():
@@ -374,9 +372,6 @@ def check_password_reset_token(email, token):
                     return False  # Token expired 
             else:
                 return False  # Token not found
-
-
-
 
 
 def verify_user_account(email, verification_token):
