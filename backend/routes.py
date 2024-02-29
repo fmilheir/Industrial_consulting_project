@@ -11,7 +11,6 @@ def configure_routes(app, mail):
 
     @app.route('/signup', methods=['POST', 'OPTIONS'])
     def signup():
-        print("Received signup request", file=sys.stderr)
         if request.method == 'OPTIONS':
             response = make_response(jsonify({'status': 'OK'}), 200)
             response.headers['Access-Control-Allow-Origin'] = 'http://localhost:8080'
@@ -30,8 +29,7 @@ def configure_routes(app, mail):
             if not all([first_name, last_name, email, phone_number, password]):
                 return jsonify({'error': 'All fields must be filled'}), 400
 
-            hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()
-                                            )
+            hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
             verification_token = generate_jwt_token(email)
              
             print("Verification token generated:", verification_token)
@@ -58,7 +56,6 @@ def configure_routes(app, mail):
                 'message': str(e),
                 'traceback': error_traceback
             }), 500
-        
     
 
     @app.route('/login', methods=['POST', 'OPTIONS'])
@@ -95,6 +92,8 @@ def configure_routes(app, mail):
             logger.exception(f"Exception in login: {e}") 
         
             return jsonify({'error': 'Failed to login'}), 500
+        
+        
     
     # This endpoint confirms the password reset using the token and updates the password
     @app.route('/confirm_password_reset', methods=['POST'])

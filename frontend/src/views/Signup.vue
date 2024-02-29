@@ -47,7 +47,7 @@
                 class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="Last Name"
               />
-              <label for="email" class="sr-only">Last Name</label>
+              <label for="email" class="sr-only">Email</label>
               <input
                 id="email"
                 name="email"
@@ -152,7 +152,7 @@ export default {
         return;
       }
       console.log(process.env.VUE_APP_BACKEND_URL);
-      fetch(`${process.env.VUE_APP_BACKEND_URL}/signup`, {
+      fetch(`http://localhost:5000/signup`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

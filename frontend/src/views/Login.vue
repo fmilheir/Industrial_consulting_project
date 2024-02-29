@@ -113,6 +113,7 @@ export default {
   },
   methods: {
     login() {
+      console.log(process.env.VUE_APP_BACKEND_URL);
       fetch(`${process.env.VUE_APP_BACKEND_URL}/login`, {
         method: "POST",
         headers: {

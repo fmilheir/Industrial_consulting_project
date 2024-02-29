@@ -14,10 +14,10 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 JWT_SECRET = os.getenv('JWT_SECRET')
 DB_USER = os.getenv('DB_USER')
-DB_PASSWORD = os.getenv("DB_PASSWORD")
-DB_HOST = os.getenv("DB_HOST")
-DB_PORT = os.getenv("DB_PORT")
-DB_NAME = os.getenv("DB_NAME")
+DB_PASSWORD = os.getenv('DB_PASSWORD')
+DB_HOST = os.getenv('DB_HOST')
+DB_PORT = os.getenv('DB_PORT')
+DB_NAME = os.getenv('DB_NAME')
 # DATABASE_URL = os.getenv("DATABASE_URL")
 
 class DBPool:
@@ -26,77 +26,19 @@ class DBPool:
     def get_instance():
         if DBPool._instance is None:
             DBPool._instance = pool.ThreadedConnectionPool(minconn=1, maxconn=10,
-                                                           user="postgres",
-                                                           password="postgres",
-                                                           host="127.0.0.1",
-                                                           port="5432",
-                                                           database='industrial_consulting')
+                                                            user="postgres",
+                                                            password="postgres",
+                                                            host="postgresql",
+                                                            port="5432",
+                                                            database='industrial_consulting')
         return DBPool._instance
 
-def create_table_user_if_not_exists():
-    with DBPool.get_instance().getconn() as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user')")
-            table_exists = cur.fetchone()[0]
-
-            if not table_exists:
-                cur.execute("""
-                    CREATE TABLE "user" (
-                        id SERIAL PRIMARY KEY,
-                        first_name VARCHAR(255) NOT NULL,
-                        last_name VARCHAR(255) NOT NULL,
-                        email VARCHAR(255) NOT NULL UNIQUE,
-                        number VARCHAR(20),
-                        password VARCHAR(255) NOT NULL,
-                        verification_token VARCHAR(255),
-                        token_expiration TIMESTAMP,
-                        verified BOOLEAN NOT NULL DEFAULT FALSE,
-                        created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                """)
-                conn.commit()
-                return "Table 'user' created successfully."
-            else:
-                return "Table 'user' already exists."
-            
-def create_table_password_reset_tokens_if_not_exists():
-    with DBPool.get_instance().getconn() as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'password_reset_tokens')")
-            table_exists = cur.fetchone()[0]
-
-            if not table_exists:
-                cur.execute("""
-                    CREATE TABLE password_reset_tokens (
-                        id SERIAL PRIMARY KEY,
-                        user_id INTEGER REFERENCES "user" (id),
-                        token VARCHAR(255) NOT NULL,
-                        expiration TIMESTAMP NOT NULL,
-                        created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                """)
-                conn.commit()
-                return "Table 'password_reset_tokens' created successfully."
-            else:
-                return "Table 'password_reset_tokens' already exists."
-        
-
-def test_db_connection():
-     if DBPool._instance is None:
-            DBPool._instance = pool.ThreadedConnectionPool(minconn=1, maxconn=10,
-                                                           user="postgres",
-                                                           password="postgres",
-                                                           host="postgresql",
-                                                           port="5432",
-                                                           database='industrial_consulting')
-            return DBPool._instance
-
-def create_table_user_if_not_exists():
-    try:
+    def create_table_user_if_not_exists():
         with DBPool.get_instance().getconn() as conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user')")
                 table_exists = cur.fetchone()[0]
+
                 if not table_exists:
                     cur.execute("""
                         CREATE TABLE "user" (
@@ -116,10 +58,125 @@ def create_table_user_if_not_exists():
                     return "Table 'user' created successfully."
                 else:
                     return "Table 'user' already exists."
-    except psycopg2.Error as e:
-        return f"Unable to create table: {e}"
+                
+    def create_table_password_reset_tokens_if_not_exists():
+        with DBPool.get_instance().getconn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'password_reset_tokens')")
+                table_exists = cur.fetchone()[0]
 
+                if not table_exists:
+                    cur.execute("""
+                        CREATE TABLE password_reset_tokens (
+                            id SERIAL PRIMARY KEY,
+                            user_id INTEGER REFERENCES "user" (id),
+                            token VARCHAR(255) NOT NULL,
+                            expiration TIMESTAMP NOT NULL,
+                            created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """)
+                    conn.commit()
+                    return "Table 'password_reset_tokens' created successfully."
+                else:
+                    return "Table 'password_reset_tokens' already exists."
             
+
+    def create_table_car_if_not_exists():
+        conn = None
+        try:
+            conn = DBPool.get_instance().getconn()
+            cur = conn.cursor()
+
+            cur.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'car')")
+            table_exists = cur.fetchone()[0]
+
+            if not table_exists:
+                cur.execute("""
+                    CREATE TABLE "car" (
+                        id SERIAL PRIMARY KEY,
+                        user_id INTEGER NOT NULL,
+                        reg VARCHAR(255) NOT NULL,
+                        FOREIGN KEY (user_id) REFERENCES "user"(id)
+                    )
+                """)
+                conn.commit()
+
+            if cur is not None:
+                cur.close()
+            if conn is not None:
+                DBPool.get_instance().putconn(conn)
+
+            return "Table 'car' created successfully."
+
+        except psycopg2.Error as e:
+            return f"Unable to create table 'car': {e}"
+
+
+    def create_table_trip_if_not_exists():
+        conn = None
+        try:
+            conn = DBPool.get_instance().getconn()
+            cur = conn.cursor()
+
+            cur.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'trip')")
+            table_exists = cur.fetchone()[0]
+
+            if not table_exists:
+                cur.execute("""
+                    CREATE TABLE "trip" (
+                        id SERIAL PRIMARY KEY,
+                        user_id INTEGER NOT NULL,
+                        distance INTEGER NOT NULL,
+                        footprint INTEGER NOT NULL,
+                        car_id INTEGER NOT NULL,
+                        FOREIGN KEY (user_id) REFERENCES "user"(id),
+                        FOREIGN KEY (car_id) REFERENCES "car"(id)
+                    )
+                """)
+                conn.commit()
+
+            if cur is not None:
+                cur.close()
+            if conn is not None:
+                DBPool.get_instance().putconn(conn)
+
+            return "Table 'trip' created successfully."
+
+        except psycopg2.Error as e:
+            return f"Unable to create table 'car': {e}"
+
+
+    def create_table_public_transport_if_not_exists():
+        conn = None
+        try:
+            conn = DBPool.get_instance().getconn()
+            cur = conn.cursor()
+
+            cur.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'public_transport')")
+            table_exists = cur.fetchone()[0]
+
+            if not table_exists:
+                cur.execute("""
+                    CREATE TABLE "public_transport" (
+                        id SERIAL PRIMARY KEY,
+                        type VARCHAR(255),
+                        footprint INTEGER NOT NULL
+                    )
+                """)
+                conn.commit()
+
+            if cur is not None:
+                cur.close()
+            if conn is not None:
+                DBPool.get_instance().putconn(conn)
+
+            return "Table 'public_transport' created successfully."
+
+        except psycopg2.Error as e:
+            return f"Unable to create table 'public_transport': {e}"
+
+
+                
 def generate_jwt_token(email):
     try:
         expiration_time = datetime.datetime.utcnow() + datetime.timedelta(hours=1)
@@ -133,99 +190,7 @@ def generate_jwt_token(email):
         return None
 
 
-def create_table_car_if_not_exists():
-    conn = None
-    try:
-        conn = DBPool.get_instance().getconn()
-        cur = conn.cursor()
 
-        cur.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'car')")
-        table_exists = cur.fetchone()[0]
-
-        if not table_exists:
-            cur.execute("""
-                CREATE TABLE "car" (
-                    id SERIAL PRIMARY KEY,
-                    user_id INTEGER NOT NULL,
-                    reg VARCHAR(255) NOT NULL,
-                    FOREIGN KEY (user_id) REFERENCES "user"(id)
-                )
-            """)
-            conn.commit()
-
-        if cur is not None:
-            cur.close()
-        if conn is not None:
-            DBPool.get_instance().putconn(conn)
-
-        return "Table 'car' created successfully."
-
-    except psycopg2.Error as e:
-        return f"Unable to create table 'car': {e}"
-
-
-def create_table_trip_if_not_exists():
-    conn = None
-    try:
-        conn = DBPool.get_instance().getconn()
-        cur = conn.cursor()
-
-        cur.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'trip')")
-        table_exists = cur.fetchone()[0]
-
-        if not table_exists:
-            cur.execute("""
-                CREATE TABLE "trip" (
-                    id SERIAL PRIMARY KEY,
-                    user_id INTEGER NOT NULL,
-                    distance INTEGER NOT NULL,
-                    footprint INTEGER NOT NULL,
-                    car_id INTEGER NOT NULL,
-                    FOREIGN KEY (user_id) REFERENCES "user"(id),
-                    FOREIGN KEY (car_id) REFERENCES "car"(id)
-                )
-            """)
-            conn.commit()
-
-        if cur is not None:
-            cur.close()
-        if conn is not None:
-            DBPool.get_instance().putconn(conn)
-
-        return "Table 'trip' created successfully."
-
-    except psycopg2.Error as e:
-        return f"Unable to create table 'car': {e}"
-
-
-def create_table_public_transport_if_not_exists():
-    conn = None
-    try:
-        conn = DBPool.get_instance().getconn()
-        cur = conn.cursor()
-
-        cur.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'public_transport')")
-        table_exists = cur.fetchone()[0]
-
-        if not table_exists:
-            cur.execute("""
-                CREATE TABLE "public_transport" (
-                    id SERIAL PRIMARY KEY,
-                    type VARCHAR(255),
-                    footprint INTEGER NOT NULL
-                )
-            """)
-            conn.commit()
-
-        if cur is not None:
-            cur.close()
-        if conn is not None:
-            DBPool.get_instance().putconn(conn)
-
-        return "Table 'public_transport' created successfully."
-
-    except psycopg2.Error as e:
-        return f"Unable to create table 'public_transport': {e}"
 
 #Insert queries
 def create_new_public_transport(transport_type, footprint):
@@ -296,6 +261,8 @@ def store_user_in_database(first_name, last_name, email, phone_number, hashed_pa
                 return f"Unexpected error: {e}", 500
         
 
+        
+
 def check_user_email(email):
     with DBPool.get_instance().getconn() as conn:
         with conn.cursor() as cur:
@@ -313,8 +280,7 @@ def verify_reset_token(email, token):
     except jwt.InvalidTokenError:
         return False
     
-    
-    
+   
 def update_user_password(email, new_password):
     print(f"Updating password for email: {email}, new password: {new_password}")
     with DBPool.get_instance().getconn() as conn:
@@ -333,6 +299,7 @@ def update_user_password(email, new_password):
                 conn.rollback()
                 return "Unexpected error.", 500
             
+
 
 
 
@@ -410,3 +377,4 @@ def verify_password(email, password):
             # Ensure the stored password hash is encoded to bytes
             stored_password_bytes = stored_password.encode('utf-8')
             return stored_password_bytes
+
